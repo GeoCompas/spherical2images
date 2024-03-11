@@ -9,24 +9,96 @@ export MAPILLARY_ACCESS_TOKEN="MLY|..."
 docker-compose build
 ```
 
-### Download points from Mapillary into geojson file
+### 1. Download points from Mapillary into geojson file
 
-```sh
-docker run -v $PWD:/mnt/ -e MAPILLARY_ACCESS_TOKEN=$MAPILLARY_ACCESS_TOKEN -it developmentseed/spherical2images:v1 \
-    get_mapillary_points \
-        --output_file_point=data/Warrendale_points.geojson \
-        --output_file_sequence=data/Warrendale_sequences.geojson \
-        --bbox=-83.2469680005052,42.3289420003625,-83.2157740004676,42.3578449996934
+```
+bash ./01_get_mapillary_points.sh
 ```
 
-### Simplify density of points
+From the `01_get_mapillary_points` bash:
 
-```sh
-docker run -v $PWD:/mnt/ -it developmentseed/spherical2images:v1 \
-    simplify_points \
-        --input_points=data/Warrendale_points_filter.geojson \
-        --output_points=data/Warrendale_simplify.geojson
+| COMMAND                 | REQUIRED | DESCRIPTION                                              |
+| -----------------       | -------- | -------------------------------------------------        |
+| --output_file_point     | no       | point file path                                          |
+| --output_file_sequence  | no       | sequence file path                                       |
+| --bbox(*)               | no       | boundary bbox                                            |
+| --geojson_boundaries(*) | no       | boundary (this file could contain many boundaries)       |
+| --field_name            | no       | a field name from GeoJSON boundaries                     |
+| --organization_ids(**)  | no       | filter by organization id from Mapillary                 |
+| --timestamp_from(***)   | no       | filter by timestamp in milliseconds                      |
+| --only_pano             | no       | filter by panoramic image                                |
+
+( * ) These two commands are excludable, if one is used the other is no longer used.
+
+( ** ) Download the short area in order to recognize the organization id, after check out if the organization id belongs to the required organization `https://graph.mapillary.com/$ORGANIZATION_ID?access_token=$TOKEN&fields=name`.
+
+( *** ) Convert the human date to timestamp (milliseconds) [here](https://www.epochconverter.com/). 
+
+### 1.5. Custom sequences from points
+It adds URLs to review the images of the sequences.
+
 ```
+bash ./01.5_custom_sequence.sh
+```
+
+From the `01.5_custom_sequence` bash:
+
+| COMMAND                 | REQUIRED | DESCRIPTION                                              |
+| -----------------       | -------- | -------------------------------------------------        |
+| --geojson_points        | yes      | point file path                                          |
+| --output_file_sequence  | no       | custom sequence file path                                |
+
+In Mapillary, many sequences have a frontal view (road) of street-view imagery. These sequences are not useful for us when we want to label the facade building or lots, so we can remove them.
+
+In order to delete unnecessary sequences, it is necessary to have the generated custom sequence files and upload them to the tool. We have 2 tools that help us to do it:
+1. A plugin in JOSM to be able to see an image of a sequence and to be able to delete it if necessary (download it from s3://ds-data-projects/JOSM/osm-obj-info.jar). 
+
+2. An [app](https://filter_sequences.surge.sh/) that allows us to load GeoJSON files and view random images of a sequence, it allows us to delete sequences by marking with a check.
+
+### 2. Simplify sequences
+```
+bash ./02_simplify_sequence.sh
+```
+
+From the `02_simplify_sequence` bash:
+- `merge_sequence` function, it merges sequences and removes duplicate values.
+
+| COMMAND                 | REQUIRED | DESCRIPTION                                              |
+| -----------------       | -------- | -------------------------------------------------        |
+| --geojson_input         | yes      | checked sequence file path                               |
+| --geojson_out           | yes      | merge sequence file path                                 |
+
+
+- `simplify_sequence` function, it simplifies and merges sequences using a buffer.
+
+| COMMAND                 | REQUIRED | DESCRIPTION                                              |
+| -----------------       | -------- | -------------------------------------------------        |
+| --geojson_input         | yes      | merge sequence file path                                 |
+| --buffer                | yes      | buffer size                                              |
+| --geojson_out           | yes      | filter buffer file path                                  |
+
+
+- `match_point_sequence` function, it filters points inside polygons.
+
+| COMMAND                 | REQUIRED | DESCRIPTION                                              |
+| -----------------       | -------- | -------------------------------------------------        |
+| --geojson_polygons      | yes      | filter buffer file path (polygons)                       |
+| --geojson_points        | yes      | points file path (points)                                |
+| --geojson_out           | yes      | filter check file path (points)                          |
+
+
+### 3. Simplify points density 
+```
+bash ./03_simplify_points.sh
+```
+
+From the `03_simplify_points` bash:
+
+| COMMAND                 | REQUIRED | DESCRIPTION                                              |
+| -----------------       | -------- | -------------------------------------------------        |
+| --input_points          | yes      | input file path                                          |
+| --output_points         | yes      | output file path                                         |
+
 
 ### Clip Pano images into left an right side
 
