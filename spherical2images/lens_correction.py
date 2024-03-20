@@ -8,6 +8,7 @@ import requests
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from uuid import uuid4
+from smart_open import open
 
 CAM_MAKER = "FUJIFILM"
 CAM_MODEL = "X-T1"
@@ -41,7 +42,8 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
     feature["properties"]["uuid_id_"] = uuid_id_
 
     image_folder_path = f"{output_images_path}/{sequence_id}"
-    if image_folder_path[:5] not in ["s3://", "gs://"]:
+    use_bucket = image_folder_path[:5] in ["s3://", "gs://"]
+    if not use_bucket:
         os.makedirs(image_folder_path, exist_ok=True)
 
     file_name = f"{image_folder_path}/{image_id}_original.jpg"
@@ -50,7 +52,7 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
 
     feature["properties"]["url"] = file_name_fixed.replace(output_images_path, s3_url)
 
-    if os.path.exists(file_name) and os.path.exists(file_name_fixed):
+    if not use_bucket and os.path.exists(file_name) and os.path.exists(file_name_fixed):
         return feature
 
     try:
