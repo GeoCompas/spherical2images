@@ -10,7 +10,7 @@ from smart_open import open
 import lensfunpy
 from copy import deepcopy
 from itertools import chain
-
+import numpy as np
 access_token = os.environ.get("MAPILLARY_ACCESS_TOKEN")
 
 
@@ -199,7 +199,9 @@ def correct_image(image_path, cam, len, focal_length, aperture, distance):
     Returns:
         cv2 image array
     """
-    im = cv2.imread(image_path)
+    with open(image_path, 'rb') as f:
+        im_bytes = f.read()
+    im = cv2.imdecode(np.frombuffer(im_bytes, np.uint8), cv2.IMREAD_COLOR)
     height, width = im.shape[0], im.shape[1]
     mod = lensfunpy.Modifier(len, cam.crop_factor, width, height)
     mod.initialize(focal_length, aperture, distance)

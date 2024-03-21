@@ -67,7 +67,11 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
         fixed_im = correct_image(
             file_name, camera, lens, FOCAL_LENGTH, APERTURE, DISTANCE
         )
-        cv2.imwrite(file_name_fixed, fixed_im)
+        _, im_buf = cv2.imencode('.jpg', fixed_im)
+        im_bytes = im_buf.tobytes()
+
+        with open(file_name_fixed, 'wb') as f:
+            f.write(im_bytes)
 
     except Exception as err:
         print(err, image_id, url)
