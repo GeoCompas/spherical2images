@@ -2,7 +2,7 @@ import click
 import lensfunpy
 import cv2
 from spherical2images.utils_images import correct_image
-from spherical2images.utils import read_geojson, write_geojson
+from spherical2images.utils import read_geojson, write_geojson, exists_file
 import os
 import requests
 from joblib import Parallel, delayed
@@ -51,8 +51,13 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
     url = "https://graph.mapillary.com/{}?fields=thumb_original_url".format(image_id)
 
     feature["properties"]["url"] = file_name_fixed.replace(output_images_path, s3_url)
-
-    if not use_bucket and os.path.exists(file_name) and os.path.exists(file_name_fixed):
+    if use_bucket:
+        bucket_name = output_images_path[5:].split("/")[0]
+        file_name_path = file_name[5:].replace(f"{bucket_name}/","")
+        file_name_fixed_path = file_name_fixed[5:].replace(f"{bucket_name}/","")
+        if exists_file(bucket_name, file_name_path) and exists_file(bucket_name,file_name_fixed_path):
+            return feature
+    elif os.path.exists(file_name) and os.path.exists(file_name_fixed):
         return feature
 
     try:

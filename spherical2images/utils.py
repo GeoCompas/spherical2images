@@ -10,7 +10,7 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 from itertools import chain
 import random
-
+import boto3
 access_token = os.environ.get("MAPILLARY_ACCESS_TOKEN")
 
 
@@ -238,3 +238,12 @@ def geom_data(features):
         delayed(geom_data_feat)(feature) for feature in tqdm(features, desc="geom data")
     )
     return new_features
+
+def exists_file(bucket_name, s3_key):
+    s3_client = boto3.client("s3")
+
+    try:
+        s3_client.head_object(Bucket=bucket_name, Key=s3_key)
+        return True
+    except Exception:
+        return False
