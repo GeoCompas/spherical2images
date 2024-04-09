@@ -6,6 +6,7 @@ Bunch of scripts to process and convert Mapillary spherical images into cube ima
 
 ```sh
 export MAPILLARY_ACCESS_TOKEN="MLY|..."
+export AWS_PROFILE="xyz..."
 docker-compose build
 ```
 
