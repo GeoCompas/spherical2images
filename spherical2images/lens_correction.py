@@ -40,8 +40,6 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
     uuid_id_ = str(uuid4())
     feature["uuid_id_"] = uuid_id_
     feature["properties"]["uuid_id_"] = uuid_id_
-    feature["properties"]["category"] = []
-    feature["properties"]["sub_category"] = []
 
     image_folder_path = f"{output_images_path}/{sequence_id}"
     use_bucket = image_folder_path[:5] in ["s3://", "gs://"]

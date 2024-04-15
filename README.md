@@ -56,9 +56,9 @@ From the `clip_mapillary_pano` bash:
 This bash downloads non-panoramic images from Mapillary and fixes the fisheye effect of the images.
 
 ```
-bash ./download_image_no_pano.sh
+bash ./lens_correction_no_pano.sh
 ```
-From the `download_image_no_pano` bash:
+From the `lens_correction_no_pano` bash:
 
 | COMMAND                 | REQUIRED | DESCRIPTION                                              |
 | -----------------       | :------: | -------------------------------------------------        |
