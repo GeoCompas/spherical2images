@@ -2,12 +2,13 @@ import click
 import lensfunpy
 import cv2
 from spherical2images.utils_images import correct_image
-from spherical2images.utils import read_geojson, write_geojson
+from spherical2images.utils import read_geojson, write_geojson, exists_file
 import os
 import requests
 from joblib import Parallel, delayed
 from tqdm import tqdm
 from uuid import uuid4
+from smart_open import open
 
 CAM_MAKER = "FUJIFILM"
 CAM_MODEL = "X-T1"
@@ -41,22 +42,28 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
     feature["properties"]["uuid_id_"] = uuid_id_
 
     image_folder_path = f"{output_images_path}/{sequence_id}"
-    if image_folder_path[:5] not in ["s3://", "gs://"]:
+    use_bucket = image_folder_path[:5] in ["s3://", "gs://"]
+    if not use_bucket:
         os.makedirs(image_folder_path, exist_ok=True)
 
     file_name = f"{image_folder_path}/{image_id}_original.jpg"
     file_name_fixed = f"{image_folder_path}/{image_id}_fixed.jpg"
-    url = "https://graph.mapillary.com/{}?fields=thumb_original_url".format(image_id)
+    url = "https://graph.mapillary.com/{}?fields=thumb_1024_url".format(image_id)
 
     feature["properties"]["url"] = file_name_fixed.replace(output_images_path, s3_url)
-
-    if os.path.exists(file_name) and os.path.exists(file_name_fixed):
+    if use_bucket:
+        bucket_name = output_images_path[5:].split("/")[0]
+        file_name_path = file_name[5:].replace(f"{bucket_name}/","")
+        file_name_fixed_path = file_name_fixed[5:].replace(f"{bucket_name}/","")
+        if exists_file(bucket_name, file_name_path) and exists_file(bucket_name,file_name_fixed_path):
+            return feature
+    elif os.path.exists(file_name) and os.path.exists(file_name_fixed):
         return feature
 
     try:
         r = requests.get(url, headers=header, timeout=30)
         data = r.json()
-        image_url = data["thumb_original_url"]
+        image_url = data["thumb_1024_url"]
         # file original
         with open(file_name, "wb") as handler:
             image_data = requests.get(image_url, stream=True).content
@@ -65,7 +72,11 @@ def feature_image_correction(feature, output_images_path, header, s3_url):
         fixed_im = correct_image(
             file_name, camera, lens, FOCAL_LENGTH, APERTURE, DISTANCE
         )
-        cv2.imwrite(file_name_fixed, fixed_im)
+        _, im_buf = cv2.imencode('.jpg', fixed_im)
+        im_bytes = im_buf.tobytes()
+
+        with open(file_name_fixed, 'wb') as f:
+            f.write(im_bytes)
 
     except Exception as err:
         print(err, image_id, url)
